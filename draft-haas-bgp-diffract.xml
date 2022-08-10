@@ -23,7 +23,7 @@
 <rfc
   xmlns:xi="http://www.w3.org/2001/XInclude"
   category="info"
-  docName="draft-rfcxml-general-template-annotated-00"
+  docName="draft-haas-bgp-diffract-00"
   ipr="trust200902"
   obsoletes=""
   updates=""
@@ -39,37 +39,41 @@
 -->
 
   <front>
-    <title abbrev="Abbreviated Title">Title</title> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#title-4 -->
+    <title abbrev="draft-haas-bgp-diffract">Differentiating BGP Route and Color Technologies</title> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#title-4 -->
     <!--  The abbreviated title is required if the full title is longer than 39 characters -->
 
-    <seriesInfo name="Internet-Draft" value="draft-rfcxml-general-template-annotated-00"/> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#seriesinfo -->
+    <seriesInfo name="Internet-Draft" value="draft-haas-bgp-diffract-00"/> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#seriesinfo -->
     <!-- Set value to the name of the draft  -->
    
-    <author fullname="Author's Full Name" initials="Author's Initials" role="editor" surname="Author's Surname"> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#author -->
+    <author fullname="Jeffrey Haas" initials="J." surname="Haas"> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#author -->
     <!-- initials should not include an initial for the surname -->
     <!-- role="editor" is optional -->
     <!-- Can have more than one author -->
       
     <!-- all of the following elements are optional -->
-      <organization>Organization</organization> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#organization -->
+      <organization>Juniper Networks</organization> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#organization -->
       <address> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#address -->
         <postal>
           <!-- Reorder these if your country does things differently -->
-          <street>Street</street>
-          <city>City</city>
-          <region>Region</region>
-          <code>Postal code</code>
-          <country>Country</country>
+          <street>1133 Innovation Way</street>
+          <city>Sunnyvale</city>
+          <region>CA</region>
+          <code>94089</code>
+          <country>US</country>
           <!-- Can use two letter country code -->
         </postal>        
+<!--
         <phone>Phone</phone>
-        <email>Email</email>  
+-->
+        <email>jhaas@juniper.net</email>  
         <!-- Can have more than one <email> element -->
+<!--
         <uri>URI</uri>
+-->
       </address>
     </author>
    
-    <date year="2022" month="3" day="1"/> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#date -->
+    <date year="2022"/> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#date -->
     <!-- On draft subbmission:
          * If only the current year is specified, the current day and month will be used.
          * If the month and year are both specified and are the current ones, the current day will
@@ -77,18 +81,36 @@
          * If the year is not the current one, it is necessary to specify at least a month and day="1" will be used.
     -->
 
-    <area>General</area>
-    <workgroup>Internet Engineering Task Force</workgroup>
+    <area>Routing</area>
+    <workgroup>IDR</workgroup>
     <!-- "Internet Engineering Task Force" is fine for individual submissions.  If this element is 
           not present, the default is "Network Working Group", which is used by the RFC Editor as 
           a nod to the history of the RFC Series. -->
     
-    <keyword>template</keyword>
+    <keyword>bgp</keyword>
     <!-- Multiple keywords are allowed.  Keywords are incorporated into HTML output files for 
          use by search engines. -->
 
     <abstract>
-      <t>Abstract</t>
+      <t>"BGP Routes with Color" have become a topic of interest in the IDR
+      Working Group. The authors of the various proposals have many things
+      in mind to solve with them, how a color might be used, and the
+      operational model for their solution.  In general, the solutions share
+      some core properties: Routes for an IP endpoint, that have a
+      domain-wide semantic element to differentiate forwarding (often called
+      a color), and appropriate state to enable that differentiated
+      forwarding.</t>
+      <t>Examples of the technologies enabling differentiated forwarding
+      include MPLS and Segment Routing.</t>
+      <t>This document examines two of the current proposals, BGP
+      Color-Aware Routing, and BGP Classful Transport, and how they do or do
+      not differentiate themselves for those properties.  This examination
+      includes how similarities in the proposals could enable the technologies
+      to interoperate with each other.  Finally, properties of the proposals
+      are examined to discuss properties for a potential common
+      solution.</t>
+      <t>This document intentionally focuses solely on the BGP protocol
+      functional properties of the proposals.</t>
     </abstract>
  
   </front>
@@ -114,8 +136,197 @@
     </section>
     
     <section>
-      <name>Body</name>
-      <t>Body text</t>
+      <name>Terminology</name>
+      <dl newline="true">
+        <dt>Color:</dt>
+        <dd>A value, typically a 32 bit unsigned integer, associated with a
+        forwarding behavior.  In -CT, analogous to a Transport-Class.</dd>
+        <dt>Color Domain:</dt>
+        <dd>One or more networks managed by a given entity wherein the color values
+        have a specific defined forwarding behavior.
+        Primarily used to contrast between scenarios where the same color's
+        value may carry a different forwarding behavior.</dd>
+        <dt>Endpoint:</dt>
+        <dd>Terminal address for a route with color; typically a
+        loopback.</dd>
+        <dt>Forwarding behavior:</dt>
+        <dd>Transport of IP or other traffic to an endpoint with specific properties
+        that may include quality of service, steering over specific paths,
+        latency properties, encapsulation, etc.</dd>
+        <dt>NLRI key</dt>
+        <dd>Properties of the BGP route with color's BGP NLRI that are used in
+        BGP's Decision Process.</dd>
+      </dl>
+    </section>
+
+    <section>
+      <name>Color-Aware Routes Protocol Elements</name>
+      <section>
+        <name>CAR Protocol Elements Diagrams</name>
+        <artset>
+          <artwork type="ascii-art" name="box.txt">
+            <![CDATA[
+   Color-Aware Routes NLRI Type (-car-05, section 2.9.2):
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |  NLRI Length  |  Key Length   |   NLRI Type   |Prefix Length  |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |               IP Prefix (variable)                           //
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |               Color (4 octets)                                |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Followed by optional TLVs encoded as below:
+
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |     Type      |    Length     |    Value (variable)          //
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Local Color Map (LCM) Extended Community (-car-05, section 2.9.3):
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |     Type=0x3  | Sub-Type=TBD2 |          Reserved             |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                             Color                             |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            ]]>
+            </artwork>
+        </artset>
+      </section>
+      <section>
+        <name>CAR Protocol Elements</name>
+        <dl newline="true">
+        <dt>NLRI Key:</dt>
+        <dd>(IP Prefix, Color)</dd>
+        <dt>Endpoint:</dt>
+        <dd>IP Prefix</dd>
+        <dt>Effective Color:</dt>
+        <dd>Color from NLRI, or LCM Color when LCM is present.  The default
+        scenario for CAR is that the color is carried in the NLRI and only
+        set in the LCM in multi-color-domain scenarios.</dd>
+        <dt>Forwarding:</dt>
+        <dd>
+          <ul>
+            <li>RFC 8277 Label Stack (optional TLV type 1)</li>
+            <li>RFC 8402 SR-MPLS Label Index (optional TLV type 2, possibly
+            with RFC 8669 Prefix-SID)</li>
+            <li>RFC 8402 SRv6 SIDs either single or multiple full-length
+            SRv6 SIDs or transposition SIDs (optional TLV type 3 plus RFC 9252 Prefix
+            SID)</li>
+          </ul>
+        </dd>
+        </dl>
+      </section>
+      <section>
+        <name>Mapping CAR Routes into CT</name>
+        <t>XXX The CAR NLRI color should be carried in the CT Route Distinguisher
+        field.</t>
+        <t>The IP Prefix should be carried in the CT IPv4/IPv6 prefix
+        field</t>
+        <t>The CAR Effective Color should be carried in the CT Transport
+        Class Extended Community</t>
+        <t>Forwarding:</t>
+        <ul>
+          <li>For RFC 8277 Label Stacks, the CAR Label TLVs will be
+          carried in the CT NLRI Labels</li>
+          <li>For RFC 8402 Label Index TLVs, an RFC 8669 Prefix-SID is
+          created with the Label Index set to the value from the CAR
+          optional NLRI's Label Index and the Flags are similarly copied.
+          If the CAR route contains a Prefix-SID SRGB, it is similarly
+          copied.  The CT Label MAY be initialized with the value of the
+          label derived from the Prefix SID, but this is a local matter.</li>
+          <li>For 9252 SRv6 SIDs, CT does not utilize the transposition
+          scheme documented in RFC 9252, Section 4.  Instead, the whole SRv6 SID
+          should be encoded in the SRv6 Service Data Sub-Sub-TLV.
+          (Transposition length 0.)  The CT Label MAY carry a locally
+          assigned label covering this forwarding state, however it may also
+          carry the distinguished label (XXX) indicating that no label
+          mapping has been assigned.  (XXX needs ref in updated CT doc.)</li>
+        </ul>
+      </section>
+      <section>
+        <name>Mapping VPN CAR Routes into CT</name>
+        <t>XXX</t>
+      </section>
+      <section>
+        <name>Miscellany</name>
+        <t>The CAR type specific non-key transitivity field is not directly
+        mapped into CT routes.</t>
+        <t>The CAR type specific non-key fields currently specify a set of
+        forwarding behaviors.  The handling of all combinations of
+        forwarding behaviors for currently specified types is not fully
+        described in the latest CAR document.</t>
+      </section>
+    </section>
+
+    <section>
+      <name>Classful Transport Protocol Elements</name>
+      <section>
+        <name>Classful Transport Protocol Elements Diagrams</name>
+        <artset>
+          <artwork type="ascii-art" name="box.txt">
+            <![CDATA[
+     Classful Transport NLRI (-ct-17, section 7):
+
+      0                   1                   2                   3
+      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |    Length     |                 Label                 |Rsrv |S|
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     ~                     Route Distinguisher (8 bytes)             |
+     |                                                               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |                     IPv4/IPv6 Prefix                          ~
+     |                                                               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+     Transport Class Extended Community (-ct-17, section 4):
+
+      0                   1                   2                   3
+      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |   Type= 0xa   | SubType= 0x02 |            Reserved           |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |                     Transport Class ID                        |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            ]]>
+            </artwork>
+        </artset>
+      </section>
+      <section>
+        <name>Classful Transport Protocol Elements</name>
+        <dl newline="true">
+          <dt>NLRI Key:</dt>
+          <dd>(Route Distinguisher, IPv4/IPv6 Prefix)</dd>
+          <dt>Endpoint:</dt>
+          <dd>IPv4/IPv6 Prefix</dd>
+          <dt>Effective Color:</dt>
+          <dd>Transport Class ID</dd>
+          <dt>Forwarding:</dt>
+          <dd>
+            <ul>
+              <li>RFC 8277 Label Stack (NLRI Labels)</li>
+              <li>RFC 8669 Prefix SID (NLRI Labels + Prefix SID Path
+              Attribute)</li>
+              <li>RFC 9252 SRv6 SIDs, excluding transposition procedures.
+              The Label field MAY contain a locally assigned label
+              corresponding to the SRv6 forwarding, or may contain the
+              distinguished value (XXX) indicating that no local label
+              binding is in effect.</li>
+            </ul>
+          </dd>
+        </dl>
+      </section>
+      <section>
+        <name>Mapping CT Routes into CAR</name>
+      </section>
+      <section>
+        <name>Mapping CT Routes into VPN CAR</name>
+        <t>XXX</t>
+      </section>
     </section>
     
     <section>
