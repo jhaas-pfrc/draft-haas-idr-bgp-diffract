@@ -147,7 +147,8 @@
         <dt>Effective Color:</dt>
         <dd>When more than one protocol element for a BGP route can contain
         a property that gives the route a color, the Effective Color is what
-        color the route is for purposes of route resolution.</dd>
+        color the route is for purposes of route resolution within the
+        procedures for that protocol extension.</dd>
         <dt>Endpoint:</dt>
         <dd>Terminal address for a route with color; typically a
         loopback.</dd>
@@ -212,12 +213,12 @@
         <dt>Forwarding:</dt>
         <dd>
           <ul>
-            <li>RFC 8277 Label Stack (optional TLV type 1)</li>
-            <li>RFC 8402 SR-MPLS Label Index (optional TLV type 2, possibly
-            with RFC 8669 Prefix-SID)</li>
-            <li>RFC 8402 SRv6 SIDs either single or multiple full-length
-            SRv6 SIDs or transposition SIDs (optional TLV type 3 plus RFC 9252 Prefix
-            SID)</li>
+            <li><xref target="RFC8277"/> Label Stack (optional TLV type 1)</li>
+            <li><xref target="RFC8402"/> SR-MPLS Label Index (optional TLV type 2, possibly
+            with <xref target="RFC8669"/> Prefix-SID)</li>
+            <li><xref target="RFC9252"/> SRv6 SIDs either single or multiple full-length
+            SRv6 SIDs or transposition SIDs (optional TLV type 3 plus 
+            <xref target="RFC9252"/> Prefix SID)</li>
           </ul>
         </dd>
         </dl>
@@ -270,10 +271,10 @@
           <dt>Forwarding:</dt>
           <dd>
             <ul>
-              <li>RFC 8277 Label Stack (NLRI Labels)</li>
-              <li>RFC 8669 Prefix SID (NLRI Labels + Prefix SID Path
+              <li><xref target="RFC8277"/> Label Stack (NLRI Labels)</li>
+              <li><xref target="RFC8669"/> Prefix SID (NLRI Labels + Prefix SID Path
               Attribute)</li>
-              <li>RFC 9252 SRv6 SIDs, excluding transposition procedures.
+              <li><xref target="RFC9252"/> SRv6 SIDs, excluding transposition procedures.
               The Label field MAY contain a locally assigned label
               corresponding to the SRv6 forwarding, or may contain the
               distinguished value (XXX) indicating that no local label
@@ -304,13 +305,14 @@
       Color.</t>
 
       <t>For CT, the additional key is a Route Distinguisher with similar
-      semantics to those used in BGP VPNs (RFC 4364, and others).  It serves
-      two purposes: Providing administrative information about the source of
-      the route with a set of cooperating networks; providing the ability
-      to allow the same endpoint to be originated from the same BGP Speaker
-      with differing forwarding behaviors that are to be preserved
-      end-to-end within the cooperating networks.  CT doesn't encode any
-      information about the route's Color or intent in the NLRI.</t>
+      semantics to those used in BGP VPNs (<xref target="RFC4364"/>, and
+      others).  It serves two purposes: Providing administrative information
+      about the source of the route with a set of cooperating networks;
+      providing the ability to allow the same endpoint to be originated from
+      the same BGP Speaker with differing forwarding behaviors that are to
+      be preserved end-to-end within the cooperating networks.  CT doesn't
+      encode any information about the route's Color or intent in the
+      NLRI.</t>
 
       <t>The procedures below describe CAR-mapped-CT routes and
       CT-mapped-CAR routes.  New BGP protocol elements are defined to
@@ -441,16 +443,17 @@
       <section>
         <name>Mapping CAR Route Forwarding State into CT-mapped-CAR routes</name>
         <ul>
-          <li>For RFC 8277 Label Stacks, the CAR Label TLVs will be
+          <li>For <xref target="RFC8277"/> Label Stacks, the CAR Label TLVs will be
           carried in the CT NLRI Labels</li>
-          <li>For RFC 8402 Label Index TLVs, an RFC 8669 Prefix-SID is
+          <li>For <xref target="RFC8669"/> Label Index TLVs, an 
+          <xref target="RFC8669"/> Prefix-SID is
           created with the Label Index set to the value from the CAR
           optional NLRI's Label Index and the Flags are similarly copied.
           If the CAR route contains a Prefix-SID SRGB, it is similarly
           copied.  The CT Label MAY be initialized with the value of the
           label derived from the Prefix SID, but this is a local matter.</li>
-          <li>For 9252 SRv6 SIDs, CT does not utilize the transposition
-          scheme documented in RFC 9252, Section 4.  Instead, the whole SRv6 SID
+          <li>For <xref target="RFC9252"/> SRv6 SIDs, CT does not utilize the transposition
+          scheme documented in <xref target="RFC9252"/>, Section 4.  Instead, the whole SRv6 SID
           should be encoded in the SRv6 Service Data Sub-Sub-TLV.
           (Transposition length 0.)  The CT Label MAY carry a locally
           assigned label covering this forwarding state, however it may also
@@ -468,13 +471,14 @@
           <li>For the simple label stack scenario for CT (no Prefix-SID Path
           Attribute), the CT Label Stack is carried in the Type 1 Label TLV.
           (-car, Section 2.9.2.1).</li>
-          <li>For RFC 8669 Label Index TLVs, when an RFC 8669 Prefix-SID
+          <li>For <xref target="RFC8669"/> Label Index TLVs, when an 
+          <xref target="RFC8669"/> Prefix-SID
           Path Attribute excluding the SRv6 Service TLVs is present, the 
           Prefix-SID Path Attribute, if present, MAY be copied if the SRGB
           is identical to local configuration.  The CAR Type 2 Label Index
           TLV (-car, Section 2.9.2.2) is initialized with the contents of
           the CT Prefix-SID's Label-Index TLV.</li>
-          <li>For RFC 9252 SRv6 SIDs, the CAR Type 3 SRv6 SID TLV (-car,
+          <li>For <xref target="RFC9252"/> SRv6 SIDs, the CAR Type 3 SRv6 SID TLV (-car,
           Section 2.9.2.3) is initialized from the CT's SRv6 SIDs carried in
           the Prefix-SID Path Attribute.  The transposition scheme encoding
           SHOULD be used, when possible.</li>
@@ -516,12 +520,24 @@
     </section>
     
     <section anchor="Security">
-      <!-- All drafts are required to have a security considerations section. See RFC 3552 for a guide. -->
       <name>Security Considerations</name>
-      <t>This document should not affect the security of the Internet.</t>
+
+      <t>The BGP transport route use cases for "BGP routes with color"
+      largely overlap those for the original BGP Labeled Unicast protocol
+      extension. (<xref target="RFC8277"/>)  Such routes are traditionally only accepted
+      from trusted BGP Speakers that exist within a BGP transport
+      domain.</t>
+
+      <t>This document defines procedures for BGP Speakers implementing both
+      the BGP-CAR and BGP-CT address families to mutually exchange routing
+      information.  Some of these procedures utilize BGP Extended
+      Communities.  Care should be taken to not accept routes with Extended
+      Communities with mapping semantics from parties not eligible to
+      participate in these procedures.  Such care may include filtering, or
+      discarding reachability with such Extened Communities from
+      unauthorized parties.</t>
     </section>
     
-    <!-- NOTE: The Acknowledgements and Contributors sections are at the end of this template -->
   </middle>
 
   <back>
@@ -531,7 +547,12 @@
         <name>Normative References</name>
         
         <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.8174.xml"/>
+        <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.8277.xml"/>
+        <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.8669.xml"/>
+        <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.9252.xml"/>
         <!-- The recommended and simplest way to include a well known reference -->
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml3/reference.I-D.dskc-bess-bgp-car.xml"/>
+        <xi:include href="https://bib.ietf.org/public/rfc/bibxml3/reference.I-D.kaliraj-idr-bgp-classful-transport-planes.xml"/>
         
       </references>
  
@@ -555,6 +576,9 @@
           <seriesInfo name="RFC" value="2119"/>
           <seriesInfo name="DOI" value="10.17487/RFC2119"/>
         </reference>
+        <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.4360.xml"/>
+        <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.4364.xml"/>
+        <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.8402.xml"/>
       </references>
     </references>
     
