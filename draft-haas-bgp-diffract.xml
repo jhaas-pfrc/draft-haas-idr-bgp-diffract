@@ -103,12 +103,10 @@
       <t>Examples of the technologies enabling differentiated forwarding
       include MPLS and Segment Routing.</t>
       <t>This document examines two of the current proposals, BGP
-      Color-Aware Routing, and BGP Classful Transport, and how they do or do
+      Color-Aware Routing, and BGP Classful Transport. It examines how they do or do
       not differentiate themselves for those properties.  This examination
       includes how similarities in the proposals could enable the technologies
-      to interoperate with each other.  Finally, properties of the proposals
-      are examined to discuss properties for a potential common
-      solution.</t>
+      to interoperate with each other.</t>
       <t>This document intentionally focuses solely on the BGP protocol
       functional properties of the proposals.</t>
     </abstract>
@@ -146,6 +144,10 @@
         have a specific defined forwarding behavior.
         Primarily used to contrast between scenarios where the same color's
         value may carry a different forwarding behavior.</dd>
+        <dt>Effective Color:</dt>
+        <dd>When more than one protocol element for a BGP route can contain
+        a property that gives the route a color, the Effective Color is what
+        color the route is for purposes of route resolution.</dd>
         <dt>Endpoint:</dt>
         <dd>Terminal address for a route with color; typically a
         loopback.</dd>
@@ -157,6 +159,160 @@
         <dd>Properties of the BGP route with color's BGP NLRI that are used in
         BGP's Decision Process.</dd>
       </dl>
+    </section>
+
+    <section>
+      <name>Mapping NLRI keys: CAR Color, CT Route Distinguisher</name>
+
+      <t>To carry routes from one protocol across BGP Speakers using the
+      other protocol, NLRI key mapping operations must be carried out
+      consistently.  Mapped NLRI keys MUST be able to be "unmapped"
+      to the original native NLRI key.  This, along with preserving BGP
+      route loop prevention mechanisms, permits consistent route selection
+      across deployments.</t>
+
+      <t>The NLRI key elements for both CAR and CT include the IP Prefix for
+      the endpoint.  However, each protocol differs on the additional key
+      carried in the NLRI to identify the route and its forwarding behavior.</t>
+      
+      <t>For CAR, the additional key is the Color of the route, and the
+      original intent for that route.  In the absence of the Local Color Map
+      (LCM) Extended Community, this Color is also the route's Effective
+      Color.</t>
+
+      <t>For CT, the additional key is a Route Distinguisher with similar
+      semantics to those used in BGP VPNs (RFC 4364, and others).  It serves
+      two purposes: Providing administrative information about the source of
+      the route with a set of cooperating networks; providing the ability
+      to allow the same endpoint to be originated from the same BGP Speaker
+      with differing forwarding behaviors that are to be preserved
+      end-to-end within the cooperating networks.  CT doesn't encode any
+      information about the route's Color or intent in the NLRI.</t>
+
+      <t>The procedures below describe CAR-mapped-CT routes and
+      CT-mapped-CAR routes.  New BGP protocol elements are defined to
+      provide these mapping capabilities.</t>
+
+      <section>
+        <name>RD-Color Route Distinguisher format</name>
+
+        <t>To carry the CAR Color NLRI key element in a CT-mapped-CAR route, this
+        document create the RD-Color Route Distinguisher.  Its type is TBD
+        and should be assigned from IANA's Route Distinguisher Type Field
+        registry from the IETF Review range.</t>
+
+        <t>The format of the RD-Color Route Distinguisher is a four-octet
+        Administrator subfield containing the Color, followed by a
+        two-octet Assigned number subfield.</t>
+      </section>
+
+      <section>
+        <name>Classful Transport Original RD Extended Community</name>
+
+        <t>To permit CAR-mapped-CT routes to restore the original
+        Route Distinguisher during unmapping, it is necessary to carry the
+        original Route Distinguisher in the route CAR-mapped-CT route.  
+        To do so, a new BGP Extended Community is defined: the Classful
+        Transport Original RD (CTORD) Extended Community.</t>
+
+        <t>The Classful Transport Original RD Extended Community should be
+        allocated from the Transitive Opaque Extended Community Sub-Types
+        registry (Type 0x03) with a sub-type TBD.  Its value field will
+        contain the CT Route Distinguisher that is to be carried in the
+        CAR-mapped-CT route.</t>
+      </section>
+
+      <section>
+        <name>Classful Transport Original Intent Extended Community</name>
+
+        <t>To permit retention of the "original intent" for the CT
+        route's Transport Color when carried in a CAR-mapped-CT route and
+        CAR procedural purposes, a new Extended Community is defined: The
+        Classful Transport Original Intent (CTOI) Extended Community.</t>
+
+        <t>This Extended Community should be allocated from the Transport
+        Class Extended Communities Sub-Types registry (Type 0x0a) with a
+        sub-type TBD.  Its contents will be identical to the Transport Class
+        Extended Community defined in -ct, Section 4: Two octets of RESERVED
+        field, four octets for Transport Class ID.</t>
+      </section>
+
+      <section>
+        <name>CAR-mapped-CT mapping procedures</name>
+
+        <t>The need to be able to consistently map a CAR Color to a CT Route
+        Distinguisher provides a challenge to the CT operational model.
+        Since the originating router for the CAR route is not carried as
+        part the CAR protocol procedures, there isn't clear information that
+        could be utilized to consistently populate the Route
+        Distinguisher.</t>
+
+        <t>If no Classful Transport Original Intent Extended Community
+        exists, the CT route's Transport Class ID is added to a newly
+        created CTOI Extended Community, and this value is used for the
+        CAR-mapped-CT route's Color NLRI key.</t>
+
+        <t>If a CTOI Extended Community is already present in the CAR route,
+        indicating that this route has been previously been mapped and then
+        unmapped, the value from that CTOI Extended Community is used for
+        the CAR-mapped-CT route's Color NLRI key.</t>
+
+        <t>The CT route's Route Distinguisher is carried in the
+        Classful Transport Original RD Extended Community in the newly
+        created CAR-mapped-CT route.</t>  
+      </section>
+      
+      <section>
+        <name>CAR-mapped-CT unmapping procedures</name>
+
+        <t>The CT route's Route Distinguisher is set from the Classful
+        Transport Original RD Extended Community.  This Extended Community
+        is then deleted.</t>
+
+        <t>The CT route's Transport Class Transport Class ID Extended
+        Community value is set to the value from the CAR-mapped-CT route's
+        RD-Color Administrator subfield.</t>
+
+        <t>The CT route's Classful Transport Original Intent Community is
+        retained from the CAR-mapped-CT route.  This permits consistent
+        CAR-mapped-CT NLRI Color mapping in the event of further
+        redistribution between CT and CAR domains.</t>
+      </section>
+
+      <section>
+        <name>CT-mapped-CAR mapping procedures</name>
+
+        <t>The CT-mapped-CAR's Route Distinguisher uses the RD-Color format
+        and contains the CAR route's NLRI Color in the Administrator field.
+        It is RECOMMENDED that the RD-Color Assigned number subfield is set
+        to zero.</t>
+
+        <t>If a CAR Local-Color-Mapping (LCM) Extended Community is present
+        on the CAR route, that community's Color value is the Effective
+        Color of the CAR route.  Otherwise, the Effective Color is the value
+        of the NLRI's Color field.  The LCM Extended Community deleted, if
+        present.</t>
+
+        <t>A Transport Class Extended Community is set on the
+        CT-mapped-CAR's route with the Transport Class ID being assigned the
+        Effective Color, determined above.</t>
+      </section>
+
+      <section>
+        <name>CT-mapped-CAR unmapping procedures</name>
+
+        <t>The CAR route's NLRI Color field is set from the RD-Color
+        Administrator subfield.</t>
+
+        <t>If the Transport Class ID for the CT-mapped-CAR route is
+        different from the value used for the NLRI Color, above, a
+        Local-Color-Mapping Extended Community is added to the CAR route
+        using the Transport Class ID value.</t>
+
+        <t>The Transport Class Extended Community is deleted.</t>
+      </section>
+
+
     </section>
 
     <section>
@@ -322,167 +478,35 @@
       </section>
       <section>
         <name>Mapping CT Routes into CAR</name>
+        <t>The CT Transport Class ID from the Transport Class Extended
+        Community is carried in the CAR Color NLRI. (XXX can there be more
+        than one TC per route?  It's not precluded in the spec.) (XXX what
+        about LCM cases?)</t>
+        <t>The CT IPv4/IPv6 prefix field should be carried in the CAR IP
+        Prefix field.</t>
+        <t>Forwarding:</t>
+        <ul>
+          <li>For the simple label stack scenario for CT (no Prefix-SID Path
+          Attribute), the CT Label Stack is carried in the Type 1 Label TLV.
+          (-car, Section 2.9.2.1).</li>
+          <li>For RFC 8669 Label Index TLVs, when an RFC 8669 Prefix-SID
+          Path Attribute excluding the SRv6 Service TLVs is present, the 
+          Prefix-SID Path Attribute, if present, MAY be copied if the SRGB
+          is identical to local configuration.  The CAR Type 2 Label Index
+          TLV (-car, Section 2.9.2.2) is initialized with the contents of
+          the CT Prefix-SID's Label-Index TLV.</li>
+          <li>For RFC 9252 SRv6 SIDs, the CAR Type 3 SRv6 SID TLV (-car,
+          Section 2.9.2.3) is initialized from the CT's SRv6 SIDs carried in
+          the Prefix-SID Path Attribute.  The transposition scheme encoding
+          SHOULD be used, when possible.</li>
+        </ul>
       </section>
       <section>
         <name>Mapping CT Routes into VPN CAR</name>
         <t>XXX</t>
       </section>
     </section>
-    
-    <section>
-      <name>List Examples</name>
-      
-      <section>
-        <name>Simple Unordered (Bullet) List</name>
-        <t>Text before the list</t>
-        <ul spacing="normal">
-          <li>First bullet</li>
-          <li>Second bullet</li>
-        </ul>
-        <t>Text after the list.</t>
-      </section>
-      
-      <section>
-        <name>Ordered List With Lowercase Letters in Brackets Instead of Numbers</name>
-        <ol type="(%c)"> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#type-1 -->
-          <li>List item (a)</li>
-          <li>List item (b)</li>
-        </ol>
-      </section>
-      
-      <section>
-        <name>Continuous Numbering in a List That is Split by Text or Sections</name>
-        <!-- The following two lists render as 
-        Text to introduce the list
-        REQ1: This will be "REQ1:"
-        REQ2: This will be "REQ2:"
-        Some text in between
-        REQ3: This will be "REQ3:"
-        REQ4: This will be "REQ4:"
-        -->
-        <t>Text to introduce the list</t>
-        <ol type="REQ%d:" group="reqs">  <!-- value of group is user-defined https://authors.ietf.org/en/rfcxml-vocabulary#group -->
-          <li>This will be "REQ1:"</li>
-          <li>This will be "REQ2:"</li>
-        </ol>
-        <t>Some text in between</t>
-        <ol type="REQ%d:" group="reqs">  <!-- same value of group as before -->
-          <li>This will be "REQ3:"</li>
-          <li>This will be "REQ4:"</li>
-        </ol>
-        <section>
-          <name>Section in-between</name>
-          <t>More text in-between</t>
-          <ol type="REQ%d:" group="reqs">  <!-- same value of group as before -->
-            <li>This will be REQ5:</li>
-            <li>This will be REQ6:</li>
-          </ol>
-        </section>
-      </section>
-      
-      <section>
-        <name>Definition Lists</name> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#dl -->
-        <dl newline="true"> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#newline -->
-        <!-- Omit newline="true" if you want each definition to start on the same line as the corresponding term -->
-          <dt>First term:</dt>
-          <dd>Definition of the first term</dd>
-          <dt>Second term:</dt>
-          <dd>Definition of the second term</dd>
-        </dl>
-      </section>
-      
-      <section>
-        <name>Lists With Hanging Labels</name>
-        <t>the list item is indented the value of indent</t>  <!--  https://authors.ietf.org/en/rfcxml-vocabulary#indent -->
-        <dl newline="true" spacing="normal" indent="8">
-        <!-- Custom indent of 8 with the defintion starting on a new line after the term -->
-          <dt>short</dt>
-          <dd>With a label shorter than the indent.</dd>
-          <dt>fantastically long label</dt>
-          <dd>With a label longer than the indent.</dd>
-        </dl>
-      </section>
-    </section>
-    
-    <section>
-      <name>Tables</name>
-      <table> <!-- https://authors.ietf.org/rfcxml-vocabulary#table -->
-        <thead> <!-- https://authors.ietf.org/rfcxml-vocabulary#thead -->
-        <!-- A table header is optional -->
-          <tr><th>Column 1</th><th>Column 2</th><th>Column 3</th></tr>
-        </thead>
-        <tbody> <!-- https://authors.ietf.org/rfcxml-vocabulary#tbody -->
-        <!-- A table body is required -->
-          <tr><td align="left">Left cell</td><td colspan="2">Colspan cell</td></tr>
-          <!-- align can be right, left or center.  colspan and rowspan work as they do in HTML -->
-          <tr><td rowspan="2">Rowspan cell</td><td align="center">Center cell</td><td align="right">Right cell</td></tr>
-          <tr><td>Cell</td><td>Cell</td></tr>
-        </tbody>
-        <tfoot> <!-- https://authors.ietf.org/rfcxml-vocabulary#tfoot -->
-        <!-- A table footer is optional -->
-          <tr><td colspan="3">Colspan footer</td></tr>
-        </tfoot>
-      </table>
-    </section>
-    
-    <section>
-      <name>Source Code Examples</name>
-      <t>This is an example C program</t>
-        <sourcecode name="helloworld.c" type="c" markers="true"> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#sourcecode -->
-          <![CDATA[
-#include <stdio.h>
-        
-int main() {
-  printf("Hello World");
-  return 0;
-}
-          ]]>
-        </sourcecode>
-        <!-- markers="true" means that the rendered file will have <CODE BEGINS> and <CODE ENDS> added. -->
-        <!-- The CDATA wrapper is optional but is strongly recommended to avoid any unexpected processing
-             or issues with angle brackets. 
-             <sourcecode></sourcecode> can optionally be wrapped in <figure></figure> -->
-    </section>
-    
-    <section anchor="adding-diagrams">
-    <!-- anchor is optional and used for reference below -->
-      <name>Adding Diagrams</name>
-      <figure>
-        <name>A Box</name>
-        <artset>  <!-- https://authors.ietf.org/en/rfcxml-vocabulary#artset -->
-        <!-- This <artset> includes two <artwork> elements, each of a different type.  Both are not 
-             always needed.  See https://authors.ietf.org/e/en/adding-diagrams -->
-          <artwork type="svg" name="https://www.rfc-editor.org/materials/format/svg/stream.svg">  <!-- https://authors.ietf.org/en/rfcxml-vocabulary#artwork -->
-            <!-- Inserting the SVG like this is only one way of adding an SVG diagram.  Another way is 
-                 to use the src attribute to point to an external file or URI.  The name attribute 
-                 recommends a filename to use if the artwork is extracted to a file. -->
-            <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 71 40">
-              <g>
-                <title>Layer 1</title>
-                <rect x="4.5" y="6.5" width="61.0" height="27.0" stroke="black" stroke-width="1.0" stroke-linecap="square" stroke-linejoin="miter" fill="none" />
-                <text x="33.883" text-anchor="middle" y="26.559">
-                  <tspan fill="black" font-size="13.0">A box</tspan>
-                </text>
-              </g>
-            </svg>
-          </artwork>
-          <artwork type="ascii-art" name="box.txt">
-            <![CDATA[
- +--------+
- | A box  |
- +--------+          
-            ]]>
-          </artwork>
-        </artset>      
-      </figure>
-    </section>
-    
-    <section>
-      <name>Using xref</name>
-      <t>A reference to <xref target="adding-diagrams"/></t>
-      <t>A reference to <xref target="RFC8174" sectionFormat="of" section="2"/></t>
-    </section>
-    
+
     <section anchor="IANA">
     <!-- All drafts are required to have an IANA considerations section. See RFC 8126 for a guide.-->
       <name>IANA Considerations</name>
@@ -529,55 +553,15 @@ int main() {
           <seriesInfo name="RFC" value="2119"/>
           <seriesInfo name="DOI" value="10.17487/RFC2119"/>
         </reference>
-       
-        <reference anchor="exampleRefMin">
-        <!-- Example minimum reference -->
-          <front>
-            <title>Title</title>
-            <author initials="Initials" surname="Surname">
-              <organization/>
-            </author>
-            <date year="2006"/>
-          </front>
-        </reference>
-
-        <reference anchor="exampleRefOrg" target="http://www.example.com/">
-        <!-- Example reference written by an organization not a person -->
-          <front>
-            <title>Title</title>
-            <author>
-              <organization>Organization</organization>
-            </author>
-            <date year="1984"/>
-          </front>
-        </reference>       
-       
       </references>
     </references>
     
-    <section>
-      <name>Appendix 1</name>
-      <t>This becomes an Appendix</t>
-    </section>
-
     <section anchor="Acknowledgements" numbered="false">
-      <!-- an Acknowledgements section is optional -->
       <name>Acknowledgements</name>
-      <t>This template uses extracts from templates written by Pekka Savola, Elwyn Davies and 
-        Henrik Levkowetz.</t>
     </section>
     
     <section anchor="Contributors" numbered="false">
-      <!-- a Contributors section is optional -->
       <name>Contributors</name>
-      <t>Thanks to all of the contributors.</t>
-      <contact fullname="Jane Doe" initials="J" surname="Doe"><!-- https://authors.ietf.org/en/rfcxml-vocabulary#contact-->
-        <!-- including contact information for contributors is optional -->
-        <organization>Acme</organization>
-        <address>
-          <email>jdoe@example.com</email>
-        </address>
-      </contact>
     </section>
     
  </back>
