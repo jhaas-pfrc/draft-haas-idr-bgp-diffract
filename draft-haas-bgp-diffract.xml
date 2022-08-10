@@ -162,6 +162,129 @@
     </section>
 
     <section>
+      <name>Color-Aware Routes Protocol Elements</name>
+      <section>
+        <name>CAR Protocol Elements Diagrams</name>
+        <artset>
+          <artwork type="ascii-art" name="box.txt">
+            <![CDATA[
+   Color-Aware Routes NLRI Type (-car-05, section 2.9.2):
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |  NLRI Length  |  Key Length   |   NLRI Type   |Prefix Length  |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |               IP Prefix (variable)                           //
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |               Color (4 octets)                                |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Followed by optional TLVs encoded as below:
+
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |     Type      |    Length     |    Value (variable)          //
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Local Color Map (LCM) Extended Community (-car-05, section 2.9.3):
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |     Type=0x3  | Sub-Type=TBD2 |          Reserved             |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                             Color                             |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            ]]>
+            </artwork>
+        </artset>
+      </section>
+      <section>
+        <name>CAR Protocol Elements</name>
+        <dl newline="true">
+        <dt>NLRI Key:</dt>
+        <dd>(IP Prefix, Color)</dd>
+        <dt>Endpoint:</dt>
+        <dd>IP Prefix</dd>
+        <dt>Effective Color:</dt>
+        <dd>Color from NLRI, or LCM Color when LCM is present.  The default
+        scenario for CAR is that the color is carried in the NLRI and only
+        set in the LCM in multi-color-domain scenarios.</dd>
+        <dt>Forwarding:</dt>
+        <dd>
+          <ul>
+            <li>RFC 8277 Label Stack (optional TLV type 1)</li>
+            <li>RFC 8402 SR-MPLS Label Index (optional TLV type 2, possibly
+            with RFC 8669 Prefix-SID)</li>
+            <li>RFC 8402 SRv6 SIDs either single or multiple full-length
+            SRv6 SIDs or transposition SIDs (optional TLV type 3 plus RFC 9252 Prefix
+            SID)</li>
+          </ul>
+        </dd>
+        </dl>
+      </section>
+    </section>
+
+    <section>
+      <name>Classful Transport Protocol Elements</name>
+      <section>
+        <name>Classful Transport Protocol Elements Diagrams</name>
+        <artset>
+          <artwork type="ascii-art" name="box.txt">
+            <![CDATA[
+     Classful Transport NLRI (-ct-17, section 7):
+
+      0                   1                   2                   3
+      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |    Length     |                 Label                 |Rsrv |S|
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     ~                     Route Distinguisher (8 bytes)             |
+     |                                                               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |                     IPv4/IPv6 Prefix                          ~
+     |                                                               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+     Transport Class Extended Community (-ct-17, section 4):
+
+      0                   1                   2                   3
+      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |   Type= 0xa   | SubType= 0x02 |            Reserved           |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |                     Transport Class ID                        |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+            ]]>
+            </artwork>
+        </artset>
+      </section>
+      <section>
+        <name>Classful Transport Protocol Elements</name>
+        <dl newline="true">
+          <dt>NLRI Key:</dt>
+          <dd>(Route Distinguisher, IPv4/IPv6 Prefix)</dd>
+          <dt>Endpoint:</dt>
+          <dd>IPv4/IPv6 Prefix</dd>
+          <dt>Effective Color:</dt>
+          <dd>Transport Class ID</dd>
+          <dt>Forwarding:</dt>
+          <dd>
+            <ul>
+              <li>RFC 8277 Label Stack (NLRI Labels)</li>
+              <li>RFC 8669 Prefix SID (NLRI Labels + Prefix SID Path
+              Attribute)</li>
+              <li>RFC 9252 SRv6 SIDs, excluding transposition procedures.
+              The Label field MAY contain a locally assigned label
+              corresponding to the SRv6 forwarding, or may contain the
+              distinguished value (XXX) indicating that no local label
+              binding is in effect.</li>
+            </ul>
+          </dd>
+        </dl>
+      </section>
+    </section>
+
+    <section>
       <name>Mapping NLRI keys: CAR Color, CT Route Distinguisher</name>
 
       <t>To carry routes from one protocol across BGP Speakers using the
@@ -311,80 +434,12 @@
 
         <t>The Transport Class Extended Community is deleted.</t>
       </section>
-
-
     </section>
 
     <section>
-      <name>Color-Aware Routes Protocol Elements</name>
+      <name>Mapping Forwarding State</name>
       <section>
-        <name>CAR Protocol Elements Diagrams</name>
-        <artset>
-          <artwork type="ascii-art" name="box.txt">
-            <![CDATA[
-   Color-Aware Routes NLRI Type (-car-05, section 2.9.2):
-
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |  NLRI Length  |  Key Length   |   NLRI Type   |Prefix Length  |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |               IP Prefix (variable)                           //
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |               Color (4 octets)                                |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-   Followed by optional TLVs encoded as below:
-
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |     Type      |    Length     |    Value (variable)          //
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-   Local Color Map (LCM) Extended Community (-car-05, section 2.9.3):
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |     Type=0x3  | Sub-Type=TBD2 |          Reserved             |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                             Color                             |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            ]]>
-            </artwork>
-        </artset>
-      </section>
-      <section>
-        <name>CAR Protocol Elements</name>
-        <dl newline="true">
-        <dt>NLRI Key:</dt>
-        <dd>(IP Prefix, Color)</dd>
-        <dt>Endpoint:</dt>
-        <dd>IP Prefix</dd>
-        <dt>Effective Color:</dt>
-        <dd>Color from NLRI, or LCM Color when LCM is present.  The default
-        scenario for CAR is that the color is carried in the NLRI and only
-        set in the LCM in multi-color-domain scenarios.</dd>
-        <dt>Forwarding:</dt>
-        <dd>
-          <ul>
-            <li>RFC 8277 Label Stack (optional TLV type 1)</li>
-            <li>RFC 8402 SR-MPLS Label Index (optional TLV type 2, possibly
-            with RFC 8669 Prefix-SID)</li>
-            <li>RFC 8402 SRv6 SIDs either single or multiple full-length
-            SRv6 SIDs or transposition SIDs (optional TLV type 3 plus RFC 9252 Prefix
-            SID)</li>
-          </ul>
-        </dd>
-        </dl>
-      </section>
-      <section>
-        <name>Mapping CAR Routes into CT</name>
-        <t>XXX The CAR NLRI color should be carried in the CT Route Distinguisher
-        field.</t>
-        <t>The IP Prefix should be carried in the CT IPv4/IPv6 prefix
-        field</t>
-        <t>The CAR Effective Color should be carried in the CT Transport
-        Class Extended Community</t>
-        <t>Forwarding:</t>
+        <name>Mapping CAR Route Forwarding State into CT-mapped-CAR routes</name>
         <ul>
           <li>For RFC 8277 Label Stacks, the CAR Label TLVs will be
           carried in the CT NLRI Labels</li>
@@ -408,83 +463,7 @@
         <t>XXX</t>
       </section>
       <section>
-        <name>Miscellany</name>
-        <t>The CAR type specific non-key transitivity field is not directly
-        mapped into CT routes.</t>
-        <t>The CAR type specific non-key fields currently specify a set of
-        forwarding behaviors.  The handling of all combinations of
-        forwarding behaviors for currently specified types is not fully
-        described in the latest CAR document.</t>
-      </section>
-    </section>
-
-    <section>
-      <name>Classful Transport Protocol Elements</name>
-      <section>
-        <name>Classful Transport Protocol Elements Diagrams</name>
-        <artset>
-          <artwork type="ascii-art" name="box.txt">
-            <![CDATA[
-     Classful Transport NLRI (-ct-17, section 7):
-
-      0                   1                   2                   3
-      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |    Length     |                 Label                 |Rsrv |S|
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     ~                     Route Distinguisher (8 bytes)             |
-     |                                                               |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |                     IPv4/IPv6 Prefix                          ~
-     |                                                               |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-     Transport Class Extended Community (-ct-17, section 4):
-
-      0                   1                   2                   3
-      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |   Type= 0xa   | SubType= 0x02 |            Reserved           |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |                     Transport Class ID                        |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-            ]]>
-            </artwork>
-        </artset>
-      </section>
-      <section>
-        <name>Classful Transport Protocol Elements</name>
-        <dl newline="true">
-          <dt>NLRI Key:</dt>
-          <dd>(Route Distinguisher, IPv4/IPv6 Prefix)</dd>
-          <dt>Endpoint:</dt>
-          <dd>IPv4/IPv6 Prefix</dd>
-          <dt>Effective Color:</dt>
-          <dd>Transport Class ID</dd>
-          <dt>Forwarding:</dt>
-          <dd>
-            <ul>
-              <li>RFC 8277 Label Stack (NLRI Labels)</li>
-              <li>RFC 8669 Prefix SID (NLRI Labels + Prefix SID Path
-              Attribute)</li>
-              <li>RFC 9252 SRv6 SIDs, excluding transposition procedures.
-              The Label field MAY contain a locally assigned label
-              corresponding to the SRv6 forwarding, or may contain the
-              distinguished value (XXX) indicating that no local label
-              binding is in effect.</li>
-            </ul>
-          </dd>
-        </dl>
-      </section>
-      <section>
-        <name>Mapping CT Routes into CAR</name>
-        <t>The CT Transport Class ID from the Transport Class Extended
-        Community is carried in the CAR Color NLRI. (XXX can there be more
-        than one TC per route?  It's not precluded in the spec.) (XXX what
-        about LCM cases?)</t>
-        <t>The CT IPv4/IPv6 prefix field should be carried in the CAR IP
-        Prefix field.</t>
-        <t>Forwarding:</t>
+        <name>Mapping CT Route Forwarding State into CAR-mapped-CT routes</name>
         <ul>
           <li>For the simple label stack scenario for CT (no Prefix-SID Path
           Attribute), the CT Label Stack is carried in the Type 1 Label TLV.
@@ -505,12 +484,35 @@
         <name>Mapping CT Routes into VPN CAR</name>
         <t>XXX</t>
       </section>
+      <section>
+        <name>Miscellany</name>
+        <t>The CAR type specific non-key transitivity field is not directly
+        mapped into CT routes.</t>
+        <t>The CAR type specific non-key fields currently specify a set of
+        forwarding behaviors.  The handling of all combinations of
+        forwarding behaviors for currently specified types is not fully
+        described in the latest CAR document.</t>
+      </section>
     </section>
 
     <section anchor="IANA">
-    <!-- All drafts are required to have an IANA considerations section. See RFC 8126 for a guide.-->
       <name>IANA Considerations</name>
-      <t>This memo includes no request to IANA.</t>
+
+      <t>IANA is requested to allocate a Route Distinguisher from the Route
+      Distinguisher Type Field registry from the IETF Review range.  The
+      Description should be "RD-Color, Administrator field is a four-byte
+      Color, Assigned value field is a two-byte integer".  The reference
+      should be this document.</t>
+
+      <t>IANA is requested to allocate a BGP Extended Community from the
+      Transitive Opaque Extended Community Sub-Types registry.  Its name
+      will be "Classful Transport Original RD".  The reference should be
+      this document.</t>
+
+      <t>IANA is requested to allocate a BGP Extended Community from the
+      Transport Class Extended Communities Sub-Types registry. Its Name will
+      be "Classful Transport Original RD".  The reference should be this
+      document.</t>
     </section>
     
     <section anchor="Security">
