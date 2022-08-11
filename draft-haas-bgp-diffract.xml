@@ -107,8 +107,6 @@
       not differentiate themselves for those properties.  This examination
       includes how similarities in the proposals could enable the technologies
       to interoperate with each other.</t>
-      <t>This document intentionally focuses solely on the BGP protocol
-      functional properties of the proposals.</t>
     </abstract>
  
   </front>
@@ -159,6 +157,12 @@
         <dt>NLRI key</dt>
         <dd>Properties of the BGP route with color's BGP NLRI that are used in
         BGP's Decision Process.</dd>
+        <dt>Resolution key</dt>
+        <dd>Properties of the BGP route with color that contribute to route
+        resolution.  This is typically resolving a given Endpoint for a
+        specific Effective Color.  This differentiates that even though the
+        NLRI key may stay the same, the resolution key may change.  See,
+        for example, the Local-Color-Mapping mechanism for BGP-CAR.</dd>
       </dl>
     </section>
 
@@ -210,6 +214,8 @@
         <dd>Color from NLRI, or LCM Color when LCM is present.  The default
         scenario for CAR is that the color is carried in the NLRI and only
         set in the LCM in multi-color-domain scenarios.</dd>
+        <dt>Resolution Key:</dt>
+        <dd>(BGP Nexthop, Effective Color)</dd>
         <dt>Forwarding:</dt>
         <dd>
           <ul>
@@ -268,6 +274,8 @@
           <dd>IPv4/IPv6 Prefix</dd>
           <dt>Effective Color:</dt>
           <dd>Transport Class ID</dd>
+          <dt>Resolution Key:</dt>
+          <dd>(BGP Nexthop, Effective Color)</dd>
           <dt>Forwarding:</dt>
           <dd>
             <ul>
@@ -497,6 +505,39 @@
         forwarding behaviors for currently specified types is not fully
         described in the latest CAR document.</t>
       </section>
+    </section>
+
+    <section>
+      <name>BGP Decision Process and Route Resolution Considerations</name>
+
+      <t>The sections above describe how BGP routes with color can be mapped
+      from one form to the other form.  BGP implementations that implement
+      both mechanisms can receive routes from both.  The purpose of the
+      mapping mechanisms above is to attempt to preserve route comparability
+      across mapped NLRI.</t>
+
+      <t>The core desired behavior for these mechanisms is to permit BGP
+      service routes that have a color mapping mechanism to resolve their
+      BGP Nexthops over endpoints for that color.  In particular, both
+      mechanisms perform a longest-match lookup for the Endpoint over the
+      resolution state for a particular color.  These resolution
+      mechanisms may implement specific fall-back procedures.  However, a
+      given deployment of one or both of these mechanisms will desire
+      consistent route selection and nexthop resolution regardless of the source 
+      of the resolving state.</t>
+
+      <t>On BGP Speakers participating in both mechanisms, operators SHOULD
+      chose one of the two mechanisms to generate the BGP route resolution
+      state for those protocols.  The mapping mechanisms permit BGP routes
+      received across the different mechanisms to be able to tie-break in a
+      single RIB according to the properties of the routes within that
+      RIB.  The choice of the mapping mechanism would likely be based on the
+      desired overall deployment model for routes with color and the
+      underlying comparability of the routes as they are distributed across
+      the cooperating networks.</t>
+
+      <t>The chosen RIB on that BGP Speaker would then be used to create the
+      route resolution state for BGP routes with color for that device.</t>
     </section>
 
     <section anchor="IANA">
