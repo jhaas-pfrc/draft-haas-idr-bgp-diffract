@@ -23,7 +23,7 @@
 <rfc
   xmlns:xi="http://www.w3.org/2001/XInclude"
   category="info"
-  docName="draft-haas-bgp-diffract-00"
+  docName="draft-haas-idr-bgp-diffract-00"
   ipr="trust200902"
   obsoletes=""
   updates=""
@@ -39,10 +39,10 @@
 -->
 
   <front>
-    <title abbrev="draft-haas-bgp-diffract">Differentiating BGP Route and Color Technologies</title> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#title-4 -->
+    <title abbrev="draft-haas-idr-bgp-diffract">Interoperability Procedures for BGP Routes with Color</title> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#title-4 -->
     <!--  The abbreviated title is required if the full title is longer than 39 characters -->
 
-    <seriesInfo name="Internet-Draft" value="draft-haas-bgp-diffract-00"/> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#seriesinfo -->
+    <seriesInfo name="Internet-Draft" value="draft-haas-idr-bgp-diffract-00"/> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#seriesinfo -->
     <!-- Set value to the name of the draft  -->
    
     <author fullname="Jeffrey Haas" initials="J." surname="Haas"> <!-- https://authors.ietf.org/en/rfcxml-vocabulary#author -->
@@ -102,11 +102,9 @@
       forwarding.</t>
       <t>Examples of the technologies enabling differentiated forwarding
       include MPLS and Segment Routing.</t>
-      <t>This document examines two of the current proposals, BGP
-      Color-Aware Routing, and BGP Classful Transport. It examines how they do or do
-      not differentiate themselves for those properties.  This examination
-      includes how similarities in the proposals could enable the technologies
-      to interoperate with each other.</t>
+      <t>This document examines two of the current proposals - BGP Color-Aware
+      Routing, and BGP Classful Transport - and proposes mechanisms to permit
+      them to interoperate.</t>
     </abstract>
  
   </front>
@@ -164,6 +162,49 @@
         NLRI key may stay the same, the resolution key may change.  See,
         for example, the Local-Color-Mapping mechanism for BGP-CAR.</dd>
       </dl>
+    </section>
+
+    <section>
+      <name>Overview</name>
+
+      <t>The forwarding behaviors covered by routes for both the BGP-CAR 
+      <xref target="I-D.dskc-bess-bgp-car"/> and
+      BGP-CT <xref target="I-D.kaliraj-idr-bgp-classful-transport-planes"/>
+      proposals can largely be mapped from one mechanism to the
+      other mechanism.  BGP-CT utilizes encodings used in existing RFCs for the
+      cited features typically for BGP Labeled-Unicast routes. BGP-CAR
+      provides optimizations against those RFCs to attempt to enable better NLRI
+      packing within a BGP Update message.</t>
+
+      <t>BGP-CAR expects to carry portions of its forwarding behavior in non-key
+      NLRI fields.</t>
+
+      <t>The procedures for mapping forwarding state from one mechanism to
+      another is covered in <xref target="mapping-forwarding"/>.</t>
+
+      <t>BGP NLRI carry reachability that is expected to be exchanged across
+      Autonomous Systems with consistent semantics for route selection.  A core
+      differentiation between BGP-CAR and BGP-CT is what contents are carried in
+      their NLRI keys, and operationally how this is intended to be used for
+      distributing routes with color.</t>
+
+      <t>BGP-CAR expects to distribute NLRI keys for a given end-point for a given
+      color. BGP-CT expects to distribute NLRI keys for a given end-point
+      carrying a Route Distinguisher.  If it is desired to pass routes from one
+      mechanism into another mechanism, it is necessary to provide a mapping
+      mechanism.</t>
+
+      <t>This document introduces the idea of the "CAR-mapped-CT" route and the
+      "CT-mapped-CAR" route wherein a BGP route of the appropriate AFI/SAFI
+      carries the state of the other route in such a way that it can be locally
+      utilized.  It also provides procedures for "unmapping" such mapped routes
+      to restore them to their native AFI/SAFI when re-entering the native
+      domain.</t>
+
+      <t><xref target="mapping-nlri"/> discusses the general mapping procedures.
+      <xref target="car-mapped-ct"/> discusses mapping BGP-CT routes into
+      BGP-CAR routes.  <xref target="ct-mapped-car"/> discusses mapping BGP-CAR
+      routes into BGP-CT routes.</t>
     </section>
 
     <section>
@@ -238,29 +279,29 @@
         <artset>
           <artwork type="ascii-art" name="box.txt">
             <![CDATA[
-     Classful Transport NLRI (-ct-17, section 7):
+ Classful Transport NLRI (-ct-17, section 7):
 
-      0                   1                   2                   3
-      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |    Length     |                 Label                 |Rsrv |S|
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     ~                     Route Distinguisher (8 bytes)             |
-     |                                                               |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |                     IPv4/IPv6 Prefix                          ~
-     |                                                               |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |    Length     |                 Label                 |Rsrv |S|
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ ~                     Route Distinguisher (8 bytes)             |
+ |                                                               |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                     IPv4/IPv6 Prefix                          ~
+ |                                                               |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-     Transport Class Extended Community (-ct-17, section 4):
+ Transport Class Extended Community (-ct-17, section 4):
 
-      0                   1                   2                   3
-      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |   Type= 0xa   | SubType= 0x02 |            Reserved           |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |                     Transport Class ID                        |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |   Type= 0xa   | SubType= 0x02 |            Reserved           |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                     Transport Class ID                        |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
             ]]>
             </artwork>
         </artset>
@@ -293,7 +334,7 @@
       </section>
     </section>
 
-    <section>
+    <section anchor="mapping-nlri">
       <name>Mapping NLRI keys: CAR Color, CT Route Distinguisher</name>
 
       <t>To carry routes from one protocol across BGP Speakers using the
@@ -327,20 +368,48 @@
       provide these mapping capabilities.</t>
 
       <section>
-        <name>RD-Color Route Distinguisher format</name>
+        <name>RD-Color Route Distinguisher Format</name>
+
+        <artwork type="ascii-art" name="box.txt">
+          <![CDATA[
+   0                   1                   2                   3
+   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |       Type = TBD (2 octets)   |        Color (4 octets)       |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |         Color continued       |   Assigned Number (2 octets)  |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+             RD-Color Route Distinguisher Format
+          ]]>
+        </artwork>
 
         <t>To carry the CAR Color NLRI key element in a CT-mapped-CAR route, this
-        document create the RD-Color Route Distinguisher.  Its type is TBD
+        document create the RD-Color Route Distinguisher.  Its Type is TBD
         and should be assigned from IANA's Route Distinguisher Type Field
         registry from the IETF Review range.</t>
 
         <t>The format of the RD-Color Route Distinguisher is a four-octet
         Administrator subfield containing the Color, followed by a
-        two-octet Assigned number subfield.</t>
+        two-octet Assigned Number subfield.</t>
       </section>
 
       <section>
         <name>Classful Transport Original RD Extended Community</name>
+
+        <artwork type="ascii-art" name="box.txt">
+          <![CDATA[
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |   Type= 0x03  | SubType= TBD  |        Value (6 octets)       |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                      Value continued                          |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+        Classful Transport Original RD Extended Community
+          ]]>
+        </artwork>
 
         <t>To permit CAR-mapped-CT routes to restore the original
         Route Distinguisher during unmapping, it is necessary to carry the
@@ -358,6 +427,20 @@
       <section>
         <name>Classful Transport Original Intent Extended Community</name>
 
+        <artwork type="ascii-art" name="box.txt">
+          <![CDATA[
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |   Type= 0x0a  | SubType= TBD  |     RESERVED (2 octets)       |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                Transport Class ID (4 octets)                  |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+      Classful Transport Original Intent Extended Community
+          ]]>
+        </artwork>
+
         <t>To permit retention of the "original intent" for the CT
         route's Transport Color when carried in a CAR-mapped-CT route and
         CAR procedural purposes, a new Extended Community is defined: The
@@ -370,7 +453,7 @@
         field, four octets for Transport Class ID.</t>
       </section>
 
-      <section>
+      <section anchor="car-mapped-ct">
         <name>CAR-mapped-CT mapping procedures</name>
 
         <t>The need to be able to consistently map a CAR Color to a CT Route
@@ -412,7 +495,7 @@
         redistribution between CT and CAR domains.</t>
       </section>
 
-      <section>
+      <section anchor="ct-mapped-car">
         <name>CT-mapped-CAR mapping procedures</name>
 
         <t>The CT-mapped-CAR's Route Distinguisher uses the RD-Color format
@@ -446,7 +529,7 @@
       </section>
     </section>
 
-    <section>
+    <section anchor="mapping-forwarding">
       <name>Mapping Forwarding State</name>
       <section>
         <name>Mapping CAR Route Forwarding State into CT-mapped-CAR routes</name>
@@ -623,12 +706,265 @@
       </references>
     </references>
     
-    <section anchor="Acknowledgements" numbered="false">
+    <section anchor="Acknowledgements">
       <name>Acknowledgements</name>
+
+      <t>TBD</t>
     </section>
     
-    <section anchor="Contributors" numbered="false">
+    <section anchor="Contributors">
       <name>Contributors</name>
+
+      <t>TBD</t>
+    </section>
+
+    <section>
+      <name>Example NLRI Mapping</name>
+
+      <section>
+        <name>Mapping a BGP-CT route into BGP-CAR</name>
+
+        <t>Input:</t>
+        <ul spacing="compact">
+          <li>Route Distinguisher 192.0.2.1:100</li>
+          <li>Endpoint: 10.0.0.1/32</li>
+          <li>Label: 100</li>
+          <li>Color: 999</li>
+        </ul>
+
+        <t>BGP-CT state:</t>
+        <artset>
+          <artwork type="ascii-art" name="box.txt">
+            <![CDATA[
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |    Length     |                 Label                 |Rsrv |S|
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ ~                     Route Distinguisher (8 bytes)             |
+ |                                                               |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                     IPv4/IPv6 Prefix                          ~
+ |                                                               |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+ BGP-CT NLRI (AFI=1, SAFI=76)
+
+ Length: 0x98 (152 bits)
+ Label:  0x00 0x00 0x64 (100)
+ Rsrv:   0x00 (0)
+ S:      0x01 (1)
+ Route Distinguisher: 0x00 0x01 0xc0 0x00 0x02 0x01 0x00 0x64 
+                      (Type 1, 192.0.2.1 : 100)
+ IPv4/IPv6 Prefix: 0x20 0x0a 0x00 0x00 0x01 (32 / 10.0.0.1)
+
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |   Type= 0xa   | SubType= 0x02 |            Reserved           |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                     Transport Class ID                        |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+ Transport Class Extended Community:
+
+ Type:     0x0a
+ SubType:  0x02
+ Reserved: 0x00 0x00
+ Transport Class ID: 0x00 0x00 0x03 0xe7 (999)
+            ]]>
+            </artwork>
+        </artset>
+
+        <t>Output:</t>
+
+        <ul spacing="compact">
+          <li>NLRI Type: 1</li>
+          <li>Prefix Length: 32</li>
+          <li>IP Prefix: 10.0.0.1</li>
+          <li>Color: 999</li>
+          <li><t>Label TLV:</t>
+            <ul spacing="compact">
+              <li>Type: 1</li>
+              <li>Length: 3</li>
+              <li>Value: 100</li>
+            </ul>
+          </li>
+          <li>CTOI Extended Community: 999</li>
+          <li>CTORD Extended Community: 192.0.2.1:100</li>
+        </ul>
+
+        <artwork type="ascii-art" name="box.txt">
+          <![CDATA[
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |  NLRI Length  |  Key Length   |   NLRI Type   |Prefix Length  |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |               IP Prefix (variable)                           //
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |               Color (4 octets)                                |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+ CAR NLRI (AFI=1, SAFI=83):
+
+ NLRI Length:   0x10 (16 octets)
+ Key Length:    0x09 (9 octets)
+ NLRI Type:     0x01 (Color-Aware Routes NLRI Type)
+ Prefix Length: 0x20 (32)
+ IP Prefix:     0x0a 0x00 0x00 0x01 (10.0.0.1)
+ Color:         0x00 0x00 0x03 0xe7 (999)
+
+
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |     Type      |    Length     |    Value (variable)          //
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+ Label TLV:
+
+ Type:   0x01 (Label TLV)
+ Length: 0x03 (3)
+ Label:  0x00 0x00 0x64 (100)
+
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |   Type= 0x0a  | SubType= TBD  |     RESERVED (2 octets)       |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                Transport Class ID (4 octets)                  |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+ Classful Transport Original Intent Extended Community:
+
+ Type: 0x0a
+ SubType: TBD
+ RESERVED: 0x00 0x000
+ Transport Class ID: 0x00 0x00 0x03 0xe7 (999)
+
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |   Type= 0x03  | SubType= TBD  |        Value (6 octets)       |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                      Value continued                          |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+ Classful Transport Original RD Extended Community:
+
+ Type:    0x03
+ SubType: TBD
+ Value:   0x00 0x01 0xc0 0x00 0x02 0x01 0x00 0x64 
+          (Type 1, 192.0.2.1 : 100)
+
+          ]]>
+        </artwork>
+
+      </section>
+
+      <section>
+        <name>Mapping a BGP-CAR route into BGP-CT</name>
+
+        <t>Input:</t>
+        <ul spacing="compact">
+          <li>NLRI Type: 1</li>
+          <li>Prefix Length: 32</li>
+          <li>IP Prefix: 10.0.0.1</li>
+          <li>Color: 999</li>
+          <li><t>Label TLV:</t>
+            <ul spacing="compact">
+              <li>Type: 1</li>
+              <li>Length: 3</li>
+              <li>Value: 100</li>
+            </ul>
+          </li>
+        </ul>
+
+        <artwork type="ascii-art" name="box.txt">
+          <![CDATA[
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |  NLRI Length  |  Key Length   |   NLRI Type   |Prefix Length  |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |               IP Prefix (variable)                           //
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |               Color (4 octets)                                |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+ CAR NLRI (AFI=1, SAFI=83):
+
+ NLRI Length:   0x10 (16 octets)
+ Key Length:    0x09 (9 octets)
+ NLRI Type:     0x01 (Color-Aware Routes NLRI Type)
+ Prefix Length: 0x20 (32)
+ IP Prefix:     0x0a 0x00 0x00 0x01 (10.0.0.1)
+ Color:         0x00 0x00 0x03 0xe7 (999)
+
+
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |     Type      |    Length     |    Value (variable)          //
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+ Label TLV:
+
+ Type:   0x01 (Label TLV)
+ Length: 0x03 (3)
+ Label:  0x00 0x00 0x64 (100)
+          ]]>
+        </artwork>
+
+        <t>Output:</t>
+        <ul spacing="compact">
+          <li>Route Distinguisher 192.0.2.1:100</li>
+          <li>Endpoint: 10.0.0.1/32</li>
+          <li>Label: 100</li>
+          <li>Color: 999</li>
+        </ul>
+
+        <t>BGP-CT state:</t>
+        <artset>
+          <artwork type="ascii-art" name="box.txt">
+            <![CDATA[
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |    Length     |                 Label                 |Rsrv |S|
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ ~                     Route Distinguisher (8 bytes)             |
+ |                                                               |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                     IPv4/IPv6 Prefix                          ~
+ |                                                               |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+ BGP-CT NLRI (AFI=1, SAFI=76)
+
+ Length: 0x98 (152 bits)
+ Label:  0x00 0x00 0x64 (100)
+ Rsrv:   0x00 (0)
+ S:      0x01 (1)
+ Route Distinguisher: 0xTBD 0xTBD 0x00 0x00 0x03 0xe7 0x00 0x00 
+                      (Type TBD - RD-Color, 999:0)
+ IPv4/IPv6 Prefix: 0x20 0x0a 0x00 0x00 0x01 (32 / 10.0.0.1)
+
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |   Type= 0xa   | SubType= 0x02 |            Reserved           |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                     Transport Class ID                        |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+ Transport Class Extended Community:
+
+ Type:     0x0a
+ SubType:  0x02
+ Reserved: 0x00 0x00
+ Transport Class ID: 0x00 0x00 0x03 0xe7 (999)
+            ]]>
+            </artwork>
+        </artset>
+
+
+      </section>
     </section>
     
  </back>
